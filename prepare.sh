@@ -1,5 +1,7 @@
 #!/bin/bash
 
+pip install -r requirements.txt
+
 PADDLE_ROOT=Paddle
 
 git clone --single-branch https://github.com/PaddlePaddle/Paddle.git ${PADDLE_ROOT}
