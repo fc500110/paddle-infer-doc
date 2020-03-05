@@ -1,0 +1,212 @@
+千辛万苦训练好模型, 上线遇到问题? Paddle预测库轻松搞定预测部署
+===============
+
+
+有了训练好的模型之后, 离最终的服务上线只差一步——预测部署.
+Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进行预测部署,
+使用Paddle预测库, 用户可以专注于数据的处理, 而不用担心服务的性能问题.
+
+下面我们一起来实战吧!
+
+
+1. 模型保存
+------------
+
+首先我们得到一个预测的模型, Paddle提供了一个内置的函数 `save_inference_model`, 将训练模型保存为预测模型.
+
+.. code:: python
+    
+    from paddle import fluid
+
+    place = fluid.CPUPlace()
+    executor = fluid.Executor(place)
+
+    image = fluid.data(name="image", shape=[None, 28, 28], dtype="float32")
+    label = fluid.data(name="label", shape=[None, 1], dtype="int64")
+
+    feeder = fluid.DataFeeder(feed_list=[image, label], place=place)
+    predict = fluid.layers.fc(input=image, size=10, act='softmax')
+
+    loss = fluid.layers.cross_entropy(input=predict, label=label)
+    avg_loss = fluid.layers.mean(loss)
+
+    executor.run(fluid.default_startup_program())
+
+    # 保存预测模型
+    fluid.io.save_inference_model("model", feed_var_names=["image"],
+        target_vars=[predict]. executor=executor)
+
+
+.. tip::
+
+    `save_inference_model`对训练模型进行剪枝, 去除和预测无关部分, 得到的模型更加适合预测部署.
+
+
+2. 预测加载
+-----------
+
+有了预测模型之后, 就可以使用预测库了, Paddle提供了 AnalysisConfig 用于管理预测部署的各种设置.
+
+.. code:: python
+
+    from paddle.fluid.core import AnalysisConfig
+
+    # 创建config
+    config = AnalysisConfig("./model")
+
+
+
+使用CPU预测时, 若硬件支持, 可以打开MKLDNN优化
+
+.. code:: python
+
+    config.enable_mkldnn()
+
+
+
+对于GPU用户, 可以设置GPU预测
+
+.. code:: python
+
+    # 在GPU 0上初始化100M显存, 这只是一个初始值, 实际显存可能会动态变化
+    config.enable_use_gpu(100, 0)
+
+
+.. tip::
+
+    Paddle预测还提供了zero copy的方式, 如下设置将打开zero copy, 减少在管理输入和输出时的拷贝
+
+    .. code:: python
+
+        # 打开zero copy, 若不使用zero copy则不要设置如下选项
+        config.switch_use_feed_fetch_ops(False)
+        config.switch_specify_input_names(True)
+
+
+设置好预测的配置之后, 就可以创建predictor了
+
+
+.. code:: python
+
+    from paddle.fluid.core import create_paddle_predictor
+
+    predictor = create_paddle_predictor(config)
+
+
+.. tip::
+
+    Paddle预测提供了多项图优化, 创建predictor时将会加载预测模型并自动运行图优化, 以提高预测性能.
+
+
+3. 运行预测
+------------
+
+创建好predictor之后, 只需要传入数据就可以运行预测了, Paddle预测提供了两种方式的预测, 假设输入数据已经读入了一个numpy.ndarray中, 下面分别介绍两种预测方式的使用. 
+
+
+3.1 zero copy
+~~~~~~~~~~~~
+使用zero copy时, Paddle预测内部使用ZeroCopyTensor管理输入输出
+
+首先将输入数据传入predictor
+
+
+.. code:: python
+
+    input_names = predictor.get_input_names()
+    # 得到输入ZeroCopyTensor, 前面保存的模型只有一个输入image, 若有多个输入类似
+    input_tensor = predictor.get_input_tensor(input_names[0])
+
+    input_tensor.copy_from_cpu(input_data.reshape([1, 28, 28]).astype("float32"))
+
+
+运行预测
+
+
+.. code:: python
+
+    predictor.zero_copy_run()
+
+
+解析预测输出结果
+
+
+.. code:: python
+
+    ouput_names = predictor.get_output_names()
+    # 获取输出ZeroCopyTensor
+    output_tensor = predictor.get_output_tensor(output_names[0])
+
+    # 得到一个numpy.ndarray结构的输出数据
+    output_data = output_tensor.copy_to_cpu()
+
+
+3.2 不使用zero copy
+~~~~~~~~~~~
+不使用zero copy方式运行预测时, Paddle预测使用PaddleTensor管理输入和输出.
+
+用PaddleTensor传入输入数据
+
+
+.. code:: python
+
+    from paddle.fluid.core import PaddleTensor
+    input_tensor = PaddleTensor(input_data.reshape([1, 28, 28]).astype("float32"))
+
+
+运行预测并返回输出结果
+
+
+.. code:: python
+
+    # 获得输出PaddleTensor
+    output_tensor = predictor.run([input_tensor])
+
+    # 将PaddleTensor转为numpy.ndarray
+    output_data = output_tensor.as_ndarray()
+
+
+4. 进阶
+-------------
+
+4.1 使用TensorRT加速预测
+~~~~~~~~~~~~
+
+Paddle预测集成了TensorRT引擎, 使用GPU时, 打开TensorRT在一些模型上可以提高性能
+
+
+.. code:: python
+
+    config.enable_tensorrt_engine(precision_mode=AnalysisConfig.Precision.Float32,
+                                  use_calib_mode=True)
+
+
+4.2 使用Paddle-Lite优化
+~~~~~~~~
+Paddle-Lite
+
+
+4.3 在其他语言中使用Paddle预测
+~~~~~~~
+
+为了满足不同用户的需求, Paddle预测库支持C++, C, Python, Go和R.
+
+
+
+.. note::
+
+    Paddle预测推荐使用C++和Python API,这两种语言API经过了严格的测试和多个版本的迭代,稳定可靠.
+
+    .. tip::
+
+
+        `Paddle预测已支持语言`
+
+        ==========  ======  ======  ======  ======  ======
+        language    C++     Python  C       Go      R 
+        ==========  ======  ======  ======  ======  ======
+        API         完整    完整    完整    完整    完整
+        性能        对齐    对齐    对齐    对齐    待对齐
+        ==========  ======  ======  ======  ======  ======
+
+        
