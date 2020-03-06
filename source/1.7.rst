@@ -1,18 +1,18 @@
-千辛万苦训练好模型, 上线遇到问题? Paddle预测库轻松搞定预测部署
+千辛万苦训练好模型，上线遇到问题？Paddle 预测库轻松搞定预测部署
 ===============
 
 
-有了训练好的模型之后, 离最终的服务上线只差一步——预测部署.
-Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进行预测部署,
-使用Paddle预测库, 用户可以专注于数据的处理, 而不用担心服务的性能问题.
+有了训练好的模型之后，离最终的服务上线只差一步——预测部署。
+Paddle 提供了性能强劲、上手简单的预测库来帮助用户更好地进行预测部署，
+使用 Paddle 预测库，用户可以专注于数据处理，而不用担心服务的性能问题。
 
-下面我们一起来实战吧!
+下面我们一起来实战吧！
 
 
 1. 模型保存
 ------------
 
-首先我们得到一个预测的模型, Paddle提供了一个内置的函数 `save_inference_model`, 将训练模型保存为预测模型.
+首先我们需要得到一个预测模型。Paddle 提供内置函数 `save_inference_model` 将训练网络保存为预测模型。
 
 .. code:: python
     
@@ -39,24 +39,24 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 .. tip::
 
-    `save_inference_model`对训练模型进行剪枝, 去除和预测无关部分, 得到的模型更加适合预测部署.
+    `save_inference_model`对训练模型进行剪枝，去除和预测无关部分，得到的模型更加适合预测部署.
 
 
 2. 预测加载
 -----------
 
-有了预测模型之后, 就可以使用预测库了, Paddle提供了 AnalysisConfig 用于管理预测部署的各种设置.
+有了预测模型之后，就可以使用预测库了。Paddle 提供了 AnalysisConfig 用于管理预测部署的各种设置。
 
 .. code:: python
 
     from paddle.fluid.core import AnalysisConfig
 
-    # 创建config
+    # 创建配置对象
     config = AnalysisConfig("./model")
 
 
 
-使用CPU预测时, 若硬件支持, 可以打开MKLDNN优化
+使用 CPU 预测时，若硬件支持，可打开 MKLDNN 优化开关。
 
 .. code:: python
 
@@ -64,26 +64,26 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 
 
-对于GPU用户, 可以设置GPU预测
+目前 Paddle 支持 Nvidia GPU 用户使用 GPU 预测。
 
 .. code:: python
 
-    # 在GPU 0上初始化100M显存, 这只是一个初始值, 实际显存可能会动态变化
+    # 在 GPU 0 上初始化 100 MB 显存。这只是一个初始值，实际显存可能会动态变化。
     config.enable_use_gpu(100, 0)
 
 
 .. tip::
 
-    Paddle预测还提供了zero copy的方式, 如下设置将打开zero copy, 减少在管理输入和输出时的拷贝
+    Paddle 预测还提供了零拷贝的方式，以减少输入输出数据的拷贝次数
 
     .. code:: python
 
-        # 打开zero copy, 若不使用zero copy则不要设置如下选项
+        # 打开零拷贝。若不需要零拷贝功能，则不用设置如下选项。
         config.switch_use_feed_fetch_ops(False)
         config.switch_specify_input_names(True)
 
 
-设置好预测的配置之后, 就可以创建predictor了
+设置好预测的配置后，就可以创建预测器了。
 
 
 .. code:: python
@@ -95,26 +95,26 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 .. tip::
 
-    Paddle预测提供了多项图优化, 创建predictor时将会加载预测模型并自动运行图优化, 以提高预测性能.
+    Paddle 预测提供了多项图优化，创建预测器时将会加载预测模型并自动进行图优化，以增强预测性能。
 
 
 3. 运行预测
 ------------
 
-创建好predictor之后, 只需要传入数据就可以运行预测了, Paddle预测提供了两种方式的预测, 假设输入数据已经读入了一个numpy.ndarray中, 下面分别介绍两种预测方式的使用. 
+创建好预测器后，只需传入数据就可以运行预测了。Paddle预测提供了两种方式进行预测，我们假定输入数据读入到 numpy.ndarray，下面分别介绍两种预测方式的使用。
 
 
-3.1 zero copy
+3.1 零拷贝
 ~~~~~~~~~~~~
-使用zero copy时, Paddle预测内部使用ZeroCopyTensor管理输入输出
+使用零拷贝时, Paddle 预测内部使用 ZeroCopyTensor 管理输入输出
 
-首先将输入数据传入predictor
+首先将输入数据传入预测器
 
 
 .. code:: python
 
     input_names = predictor.get_input_names()
-    # 得到输入ZeroCopyTensor, 前面保存的模型只有一个输入image, 若有多个输入类似
+    # 得到输入 ZeroCopyTensor，前面保存的模型只有一个输入图片，多输入下的操作是类似的。
     input_tensor = predictor.get_input_tensor(input_names[0])
 
     input_tensor.copy_from_cpu(input_data.reshape([1, 28, 28]).astype("float32"))
@@ -134,18 +134,18 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 .. code:: python
 
     ouput_names = predictor.get_output_names()
-    # 获取输出ZeroCopyTensor
+    # 获取输出 ZeroCopyTensor
     output_tensor = predictor.get_output_tensor(output_names[0])
 
-    # 得到一个numpy.ndarray结构的输出数据
+    # 得到一个 numpy.ndarray 封装的输出数据
     output_data = output_tensor.copy_to_cpu()
 
 
-3.2 不使用zero copy
+3.2 不使用零拷贝
 ~~~~~~~~~~~
-不使用zero copy方式运行预测时, Paddle预测使用PaddleTensor管理输入和输出.
+不使用零拷贝方式运行预测时, Paddle 预测使用 PaddleTensor 管理输入和输出.
 
-用PaddleTensor传入输入数据
+用 PaddleTensor 传入输入数据
 
 
 .. code:: python
@@ -159,20 +159,20 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 .. code:: python
 
-    # 获得输出PaddleTensor
+    # 获得输出 PaddleTensor
     output_tensor = predictor.run([input_tensor])
 
-    # 将PaddleTensor转为numpy.ndarray
+    # 将 PaddleTensor 转换为 numpy.ndarray 数据类型
     output_data = output_tensor.as_ndarray()
 
 
 4. 进阶
 -------------
 
-4.1 使用TensorRT加速预测
+4.1 使用 TensorRT 加速预测
 ~~~~~~~~~~~~
 
-Paddle预测集成了TensorRT引擎, 使用GPU时, 打开TensorRT在一些模型上可以提高性能
+Paddle 预测集成了 TensorRT 引擎。使用 GPU 预测时，开启 TensorRT 在一些模型上可以提高性能。
 
 
 .. code:: python
@@ -186,26 +186,26 @@ Paddle预测集成了TensorRT引擎, 使用GPU时, 打开TensorRT在一些模型
 Paddle-Lite
 
 
-4.3 在其他语言中使用Paddle预测
+4.3 在其它语言中使用 Paddle 预测
 ~~~~~~~
 
-为了满足不同用户的需求, Paddle预测库支持C++, C, Python, Go和R.
+为满足不同用户的需求，Paddle 预测库支持 C++、C、Python、Go 和 R 语言。
 
 
 
 .. note::
 
-    Paddle预测推荐使用C++和Python API,这两种语言API经过了严格的测试和多个版本的迭代,稳定可靠.
+    Paddle 预测推荐使用 C++ 和 Python 用户接口，这两种语言的接口已经过严格测试和多次的迭代，稳定可靠。
 
     .. tip::
 
 
-        `Paddle预测已支持语言`
+        `Paddle 预测已支持语言`
 
         ==========  ======  ======  ======  ======  ======
-        language    C++     Python  C       Go      R 
+        语言    C++     Python  C       Go      R 
         ==========  ======  ======  ======  ======  ======
-        API         完整    完整    完整    完整    完整
+        用户接口         完整    完整    完整    完整    完整
         性能        对齐    对齐    对齐    对齐    待对齐
         ==========  ======  ======  ======  ======  ======
 
