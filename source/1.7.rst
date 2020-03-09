@@ -73,7 +73,7 @@
 
     from paddle.fluid.core import AnalysisConfig
 
-    # 创建config
+    # 创建配置对象
     config = AnalysisConfig("./model")
 
 
@@ -93,7 +93,7 @@
 
 .. code:: python
 
-    # 在GPU 0上初始化100M显存, 这只是一个初始值, 实际显存可能会动态变化
+    # 在 GPU 0 上初始化 100 MB 显存。这只是一个初始值，实际显存可能会动态变化。
     config.enable_use_gpu(100, 0)
 
 
@@ -106,7 +106,7 @@
     config.switch_specify_input_names(True)
 
 
-设置好预测的配置之后, 就可以创建predictor了
+设置好预测的配置后，就可以创建预测器了。
 
 
 .. code:: python
@@ -118,7 +118,7 @@
 
 .. tip::
 
-    Paddle预测提供了多项图优化, 创建predictor时将会加载预测模型并自动运行图优化, 以提高预测性能.
+    Paddle 预测提供了多项图优化，创建预测器时将会加载预测模型并自动进行图优化，以增强预测性能。
 
 
 3. 运行
@@ -133,7 +133,7 @@ Paddle 提供了简单易用的API来管理输入和输出. 首先将输入数�
 .. code:: python
 
     input_names = predictor.get_input_names()
-    # 得到输入ZeroCopyTensor, 前面保存的模型只有一个输入image, 若有多个输入类似
+    # 得到输入 ZeroCopyTensor，前面保存的模型只有一个输入图片，多输入下的操作是类似的。
     input_tensor = predictor.get_input_tensor(input_names[0])
 
     input_tensor.copy_from_cpu(input_data.reshape([1, 28, 28]).astype("float32"))
@@ -153,10 +153,10 @@ Paddle 提供了简单易用的API来管理输入和输出. 首先将输入数�
 .. code:: python
 
     ouput_names = predictor.get_output_names()
-    # 获取输出ZeroCopyTensor
+    # 获取输出 ZeroCopyTensor
     output_tensor = predictor.get_output_tensor(output_names[0])
 
-    # 得到一个numpy.ndarray结构的输出数据
+    # 得到一个 numpy.ndarray 封装的输出数据
     output_data = output_tensor.copy_to_cpu()
 
 
@@ -164,10 +164,10 @@ Paddle 提供了简单易用的API来管理输入和输出. 首先将输入数�
 4. 进阶
 -------------
 
-4.1 使用TensorRT加速预测
+4.1 使用 TensorRT 加速预测
 ~~~~~~~~~~~~
 
-Paddle预测集成了TensorRT引擎, 使用GPU时, 打开TensorRT在一些模型上可以提高性能
+Paddle 预测集成了 TensorRT 引擎。使用 GPU 预测时，开启 TensorRT 在一些模型上可以提高性能。
 
 
 .. code:: python
@@ -181,7 +181,7 @@ Paddle预测集成了TensorRT引擎, 使用GPU时, 打开TensorRT在一些模型
 Paddle-Lite
 
 
-4.3 在其他语言中使用Paddle预测
+4.3 在其它语言中使用 Paddle 预测
 ~~~~~~~
 
         
