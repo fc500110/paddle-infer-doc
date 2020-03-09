@@ -1,18 +1,38 @@
-千辛万苦训练好模型, 上线遇到问题? Paddle预测库轻松搞定预测部署
+千辛万苦训练好模型, 上线遇到问题? Paddle预测库轻松搞定模型部署
 ===============
 
 
-有了训练好的模型之后, 离最终的服务上线只差一步——预测部署.
-Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进行预测部署,
-使用Paddle预测库, 用户可以专注于数据的处理, 而不用担心服务的性能问题.
+深度学习一般分为训练和推理两个部分, 训练是神经网络"学习"的过程, 主要关注如何搜索和求解模型参数, 发现训练数据中的规律. 有了训练好的模型之后, 就要在在线环境中使用模型, 这个过程叫做推理, 推理过程中主要关注计算的性能. 飞桨提供了性能强劲, 上手简单的推理引擎来帮助用户更好地部署深度学习服务, 让用户专注于数据处理, 而不用担心底层的优化问题.
 
-下面我们一起来实战吧!
+
+经过多个版本的升级迭代, 飞桨推理引擎针对不同环境提供了多种性能优化方法, 让用户得到最优的性能体验. 同时, 为了满足不同用户的需求, 还提供了多种常用语言的调用接口.
+
+
+.. note::
+
+    Paddle预测推荐使用C++和Python API,这两种语言API经过了严格的测试和多个版本的迭代,稳定可靠.
+
+    .. tip::
+
+
+        `Paddle预测已支持语言`
+
+        ==========  ======  ======  ======  ======  ======
+        language    C++     Python  C       Go      R 
+        ==========  ======  ======  ======  ======  ======
+        API         完整    完整    完整    完整    完整
+        性能        对齐    对齐    对齐    对齐    待对齐
+        ==========  ======  ======  ======  ======  ======
+
+
+
+下面我们一起来看看如何使用飞桨推理引擎吧!
 
 
 1. 模型保存
 ------------
 
-首先我们得到一个预测的模型, Paddle提供了一个内置的函数 `save_inference_model`, 将训练模型保存为预测模型.
+首先, 我们需要训练并保存一个模型, Paddle提供了一个内置的函数 `save_inference_model`, 将训练模型保存为预测模型.
 
 .. code:: python
     
@@ -32,20 +52,22 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
     executor.run(fluid.default_startup_program())
 
-    # 保存预测模型
+    # 保存预测模型到model目录中, 只保存与输入image和输出predict相关的部分网络
     fluid.io.save_inference_model("model", feed_var_names=["image"],
         target_vars=[predict]. executor=executor)
 
 
 .. tip::
 
-    `save_inference_model`对训练模型进行剪枝, 去除和预测无关部分, 得到的模型更加适合预测部署.
+    `save_inference_model`根据预测需要的输入和输出, 对训练模型进行剪枝, 去除和预测无关部分, 得到的模型相比训练更加精简, 适合优化和部署.
 
 
 2. 预测加载
 -----------
 
-有了预测模型之后, 就可以使用预测库了, Paddle提供了 AnalysisConfig 用于管理预测部署的各种设置.
+有了预测模型之后, 就可以使用预测库了, Paddle提供了 AnalysisConfig 用于管理预测部署的各种设置, 用户可以根据自己的上线环境, 打开各种优化.
+
+首先我们创建一个config
 
 .. code:: python
 
@@ -56,7 +78,10 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 
 
-使用CPU预测时, 若硬件支持, 可以打开MKLDNN优化
+在Intel CPU上, 若硬件支持, 可以打开 `DNNL`_ (Deep Neural Network Library, 原名MKLDNN) 优化, 这是一个Intel开源的高性能计算库, 用于Intel架构的处理器和图形处理器上的深度学习优化, 飞桨推理引擎在后端将自动调用.
+
+.. _DNNL: https://github.com/intel/mkl-dnn.git
+
 
 .. code:: python
 
@@ -64,7 +89,7 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
 
 
 
-对于GPU用户, 可以设置GPU预测
+对于需要使用Nvidia GPU用户, 只需要一行配置, 飞桨就会自动将计算切换到GPU上
 
 .. code:: python
 
@@ -72,15 +97,13 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
     config.enable_use_gpu(100, 0)
 
 
-.. tip::
+飞桨推理引擎提供了zero copy的方式管理输入和输出, 减少拷贝
 
-    Paddle预测还提供了zero copy的方式, 如下设置将打开zero copy, 减少在管理输入和输出时的拷贝
+.. code:: python
 
-    .. code:: python
-
-        # 打开zero copy, 若不使用zero copy则不要设置如下选项
-        config.switch_use_feed_fetch_ops(False)
-        config.switch_specify_input_names(True)
+    # 打开zero copy
+    config.switch_use_feed_fetch_ops(False)
+    config.switch_specify_input_names(True)
 
 
 设置好预测的配置之后, 就可以创建predictor了
@@ -98,17 +121,13 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
     Paddle预测提供了多项图优化, 创建predictor时将会加载预测模型并自动运行图优化, 以提高预测性能.
 
 
-3. 运行预测
+3. 运行
 ------------
 
-创建好predictor之后, 只需要传入数据就可以运行预测了, Paddle预测提供了两种方式的预测, 假设输入数据已经读入了一个numpy.ndarray中, 下面分别介绍两种预测方式的使用. 
+创建好predictor之后, 只需要传入数据就可以运行预测了, 这里假设我们已经将输入数据读入了一个numpy.ndarray数组中.
 
 
-3.1 zero copy
-~~~~~~~~~~~~
-使用zero copy时, Paddle预测内部使用ZeroCopyTensor管理输入输出
-
-首先将输入数据传入predictor
+Paddle 提供了简单易用的API来管理输入和输出. 首先将输入数据传入predictor
 
 
 .. code:: python
@@ -120,7 +139,7 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
     input_tensor.copy_from_cpu(input_data.reshape([1, 28, 28]).astype("float32"))
 
 
-运行预测
+运行推理引擎, 这里将会执行真正的计算
 
 
 .. code:: python
@@ -128,7 +147,7 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
     predictor.zero_copy_run()
 
 
-解析预测输出结果
+解析结果到一个numpy数组中
 
 
 .. code:: python
@@ -140,30 +159,6 @@ Paddle提供了性能强劲, 上手简单的预测库来帮助用户更好地进
     # 得到一个numpy.ndarray结构的输出数据
     output_data = output_tensor.copy_to_cpu()
 
-
-3.2 不使用zero copy
-~~~~~~~~~~~
-不使用zero copy方式运行预测时, Paddle预测使用PaddleTensor管理输入和输出.
-
-用PaddleTensor传入输入数据
-
-
-.. code:: python
-
-    from paddle.fluid.core import PaddleTensor
-    input_tensor = PaddleTensor(input_data.reshape([1, 28, 28]).astype("float32"))
-
-
-运行预测并返回输出结果
-
-
-.. code:: python
-
-    # 获得输出PaddleTensor
-    output_tensor = predictor.run([input_tensor])
-
-    # 将PaddleTensor转为numpy.ndarray
-    output_data = output_tensor.as_ndarray()
 
 
 4. 进阶
@@ -188,25 +183,5 @@ Paddle-Lite
 
 4.3 在其他语言中使用Paddle预测
 ~~~~~~~
-
-为了满足不同用户的需求, Paddle预测库支持C++, C, Python, Go和R.
-
-
-
-.. note::
-
-    Paddle预测推荐使用C++和Python API,这两种语言API经过了严格的测试和多个版本的迭代,稳定可靠.
-
-    .. tip::
-
-
-        `Paddle预测已支持语言`
-
-        ==========  ======  ======  ======  ======  ======
-        language    C++     Python  C       Go      R 
-        ==========  ======  ======  ======  ======  ======
-        API         完整    完整    完整    完整    完整
-        性能        对齐    对齐    对齐    对齐    待对齐
-        ==========  ======  ======  ======  ======  ======
 
         
