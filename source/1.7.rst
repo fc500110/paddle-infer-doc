@@ -187,7 +187,12 @@ Paddle 预测集成了 TensorRT 引擎。使用 GPU 预测时，开启 TensorRT 
 
 4.2 使用Paddle-Lite优化
 ~~~~~~~~
-Paddle-Lite
+
+Paddle 预测集成了 Paddle-Lite 预测加速引擎。开启 Paddle-Lite 在一些模型上可以增强性能。
+
+.. code:: python
+
+    config.enable_lite_engine(precision_mode=AnalysisConfig.Precision.Float32)
 
 
 4.3 在其它语言中使用 Paddle 预测
