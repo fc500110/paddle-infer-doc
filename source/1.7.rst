@@ -173,17 +173,44 @@ Paddle 提供了简单易用的API来管理输入和输出. 首先将输入数�
 4. 进阶
 -------------
 
-4.1 使用 TensorRT 加速预测
+4.1 使用 Paddle-TensorRT 加速预测
 ~~~~~~~~~~~~
 
-Paddle 预测集成了 TensorRT 引擎。使用 GPU 预测时，开启 TensorRT 在一些模型上可以提高性能。
+掌握了使用 Paddle 预测库进行推理部署的基础方法后，让我们来熟悉进一步优化推理性能的方法吧。
 
+NVIDIA TensorRT 是一个高性能的深度学习预测库，可为 GPU 上的深度学习推理应用程序提供低延迟和高吞吐量。
+如果想要在 GPU 上进一步提高推理性能，可以尝试使用 Paddle-TensorRT。
+
+Paddle 采用子图的形式对 TensorRT 进行了集成。使用 GPU 预测时，开启 TensorRT 在一些模型上可以提高性能。
+
+在已经配置使用 GPU 预测的基础上, 只需要一行配置就可以开启 Paddle-TensorRT 加速预测：
 
 .. code:: python
 
-    config.enable_tensorrt_engine(precision_mode=AnalysisConfig.Precision.Float32,
-                                  use_calib_mode=True)
+    config.enable_tensorrt_engine(workspace_size=1 << 30,
+                                  max_batch_size=1,
+                                  min_subgraph_size=3,  
+                                  precision_mode=AnalysisConfig.Precision.Float32,
+                                  use_static=False,
+                                  use_calib_mode=False)
 
+其中：
+
+1. workspace_size 为 int 类型，指定TensorRT使用的工作空间大小，TensorRT会在该大小限制下筛选合适的kernel执行预测运算。建议设大一些，一般设为 1 << 20 至1 << 30；
+
+2. max_batch_size 为 int 类型，指定最大的batch大小，运行时batch大小不得超过此限定值；
+
+3. min_subgraph_size 为 int 类型，Paddle-TRT是以子图的形式运行，为了避免性能损失，当子图内部节点个数大于min_subgraph_size的时候，才会使用Paddle-TRT运行；
+
+4. use_static 为 bool 类型，默认值为False。如果指定为True，在初次运行程序的时候会将TRT的优化信息进行序列化到磁盘上，下次运行时直接加载优化的序列化信息而不需要重新生成；
+
+5. use_calib_mode 为 bool 类型，默认值为False。若要运行Paddle-TRT int8离线量化校准，需要将此选项设置为True。
+
+
+TensorRT是NVIDIA的预测加速库，Paddle是怎样集成它的呢？其实，Paddle-TensorRT以子图的形式运行，当模型加载后，神经网络可以表示为由变量和运算节点组成的计算图。
+Paddle-TensorRT实现的功能是对整个图进行扫描，发现图中可以使用TensorRT优化的子图，并使用TensorRT节点替换它们。在模型的推断期间，如果遇到TensorRT节点，
+Paddle会调用TensorRT库对该节点进行优化，其他的节点调用Paddle的原生实现。TensorRT在推断期间能够进行Op的横向和纵向融合，过滤掉冗余的Op，
+并对特定平台下的特定的Op选择合适的kernel等进行优化，能够加快模型的预测速度。
 
 4.2 使用Paddle-Lite优化
 ~~~~~~~~
