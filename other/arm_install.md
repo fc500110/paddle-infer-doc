@@ -85,7 +85,7 @@ make -j4 install
 export PATH=$WORKDIR/python37/bin:$PATH
 ```
 
-2. 安装依赖库
+2. 安装依赖库(需要单独安装)
 
 安装numpy
 
@@ -106,6 +106,44 @@ cd $WORKDIR
 wget https://github.com/scipy/scipy/releases/download/v1.3.1/scipy-1.3.1.tar.gz
 tar zxvf scipy-1.3.1.tar.gz
 cd scipy-1.3.1
+python3 setup.py install
+```
+
+安装pillow
+
+```bash
+cd $WORKDIR
+cd Pillow-7.1.0
+sudo apt install libjpeg-dev
+python3 -m pip install -r requirements.txt
+python3 setup.py install
+```
+
+安装matplotlib
+
+``` bash
+cd $WORKDIR
+wget -O matplotlib.tar.gz https://github.com/matplotlib/matplotlib/archive/v3.2.1.tar.gz
+tar zxvf matplotlib.tar.gz
+cd matplotlib-3.2.1
+python3 setup.py install
+
+# 如果报juqyery-ui的错误, 则需要执行以下步骤
+wget https://jqueryui.com/resources/download/jquery-ui-1.12.1.zip
+tar zxvf jquery-ui-1.12.1.zip
+unzip jquery-ui-1.12.1.zip
+mv jquery-ui-1.12.1 build/bdist.linux-aarch64/egg/matplotlib/backends/web_backend/
+python3 setup.py install
+```
+
+安装kiwisolver(matplotlib依赖)
+
+``` bash
+cd $WORKDIR
+wget -O kiwi.tar.gz https://github.com/nucleic/kiwi/archive/1.2.0.tar.gz
+tar zxvf kiwi.tar.gz
+cd kiwi-1.2.0
+python3 -m pip install cppy
 python3 setup.py install
 ```
 
@@ -132,3 +170,4 @@ cmake .. \
 
 make TARGET=ARMV8 -j4
 ```
+
